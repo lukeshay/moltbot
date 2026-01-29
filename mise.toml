@@ -1,3 +1,2 @@
 [tools]
-node = { version = "22.22.0" }
-pnpm = { version = "10.28.2" }
+node = { version = "24.13.0" }
