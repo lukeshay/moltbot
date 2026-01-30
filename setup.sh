@@ -49,7 +49,7 @@ setup_mise() {
 }
 
 setup_tailscale() {
-  tailscale up --auth-key "${TAILSCALE_AUTH_KEY}"
+  tailscale up --auth-key "${TAILSCALE_AUTH_KEY}" --hostname "${TAILSCALE_HOSTNAME:-$(hostname)}"
 }
 
 setup_ufw() {
