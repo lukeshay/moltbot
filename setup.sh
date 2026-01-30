@@ -38,7 +38,8 @@ install_dependencies() {
     eval "$($BREW_PATH/bin/brew shellenv)"
   fi
 
-  brew install mise ollama tailscale
+  brew install mise ollama
+  curl -fsSL https://tailscale.com/install.sh | sh
 }
 
 setup_mise() {
@@ -55,9 +56,7 @@ setup_mise() {
 }
 
 setup_tailscale() {
-  sudo systemctl enable --now tailscaled
-
-  tailscale up --auth-key "${TAILSCALE_AUTH_KEY}" --hostname "${TAILSCALE_HOSTNAME:-$(hostname)}"
+  sudo tailscale up --auth-key "${TAILSCALE_AUTH_KEY}" --hostname "${TAILSCALE_HOSTNAME:-$(hostname)}"
 }
 
 setup_ufw() {
