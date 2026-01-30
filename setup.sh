@@ -17,22 +17,29 @@ install_dependencies() {
   sudo apt upgrade -y
   sudo apt install -y build-essential curl git procps file
 
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-  # Detect brew installation path
-  if [ -d "/home/linuxbrew/.linuxbrew" ]; then
-    BREW_PATH="/home/linuxbrew/.linuxbrew"
-  elif [ -d "$HOME/.linuxbrew" ]; then
-    BREW_PATH="$HOME/.linuxbrew"
+  # Check if Homebrew is already installed
+  if command -v brew >/dev/null 2>&1; then
+    echo "Homebrew is already installed, skipping installation."
   else
-    echo "Error: Could not find Homebrew installation"
-    exit 1
+    echo "Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+    # Detect brew installation path
+    if [ -d "/home/linuxbrew/.linuxbrew" ]; then
+      BREW_PATH="/home/linuxbrew/.linuxbrew"
+    elif [ -d "$HOME/.linuxbrew" ]; then
+      BREW_PATH="$HOME/.linuxbrew"
+    else
+      echo "Error: Could not find Homebrew installation"
+      exit 1
+    fi
+
+    echo "eval \"\$($BREW_PATH/bin/brew shellenv)\"" >> ~/.bashrc
+    eval "$($BREW_PATH/bin/brew shellenv)"
   fi
 
-  echo "eval \"\$($BREW_PATH/bin/brew shellenv)\"" >> ~/.bashrc
-  eval "$($BREW_PATH/bin/brew shellenv)"
-
-  brew install mise tailscale ollama
+  brew install mise ollama
+  brew install --cask tailscale-app
 }
 
 setup_mise() {
@@ -70,9 +77,27 @@ install_openclaw() {
   npm install -g openclaw@latest
 }
 
+INSTRUCTIONS=$(cat <<'EOF'
+1. Configure SSH
+    sudo vim /etc/ssh/sshd_config
+      # Set explicitly:
+      PasswordAuthentication no
+      PermitRootLogin no
+
+    sudo sshd -t && sudo systemctl reload ssh
+2. Log in to ollama
+    ollama signin
+EOF
+)
+
+print_instructions() {
+  echo "${INSTRUCTIONS}"
+}
+
 install_dependencies
 setup_mise
 setup_tailscale
 setup_ufw
 setup_ollama
 install_openclaw
+print_instructions
