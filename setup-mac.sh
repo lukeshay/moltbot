@@ -2,27 +2,28 @@
 
 set -e
 
-require_cli() {
-  if [[ ! $(which $1) ]]; then
-    echo "Error: $1 is not installed"
+require_env() {
+  local var_name="$1"
+  if [ -z "${!var_name}" ]; then
+    echo "Error: Environment variable '$var_name' is not set."
     exit 1
   fi
 }
 
-verify_dependencies() {
-  require_cli "docker"
-}
+require_env "TAILSCALE_AUTH_KEY"
 
-install_homebrew() {
+install_dependencies() {
   if [[ ! $(which brew) ]]; then
     curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | sh
   fi
-}
 
-install_mise() {
+  brew install mise fail2ban ollama
+  brew install --cask tailscale-app
+  npm i -g openclaw@latest
+  
   if [[ ! $(which mise) ]]; then
-    echo 'eval "$(mise activate bash)"' >> ~/.bashrc
-    eval "$(mise activate bash)"
+    echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
+    eval "$(mise activate zsh)"
   fi
   
   cp mise.toml ~/mise.toml
@@ -33,12 +34,6 @@ install_mise() {
   mise trust
   mise install
   popd
-}
-
-install_dependencies() {
-  brew install mise fail2ban
-  brew install --cask tailscale-app
-  npm i -g moltbot@latest
 }
 
 setup_pf() {
@@ -71,28 +66,31 @@ EOF
   sudo pfctl -f "$PF_ANCHOR"
 }
 
+
+setup_ollama() {
+  brew services start ollama
+  ollama pull kimi-k2.5:cloud
+}
+
 setup_fail2ban() {
   sudo brew services start fail2ban
 }
 
 setup_tailscale() {
-  sudo /Applications/Tailscale.app/Contents/MacOS/Tailscale up
+  TAILSCALE_HOSTNAME="${TAILSCALE_HOSTNAME:-$(hostname)}"
+
+  sudo /Applications/Tailscale.app/Contents/MacOS/Tailscale up --auth-key "${TAILSCALE_AUTH_KEY}" --hostname "${TAILSCALE_HOSTNAME}"
 }
 
 print_instructions() {
   echo "Setup complete. Please follow the instructions to complete the setup."
-  echo "1. Login to Tailscale by opening the Tailscale app in the menu bar"
-  echo "2. Update ssh config with the following:"
+  echo "1. Update ssh config with the following:"
   echo "  sudo vim /etc/ssh/sshd_config"
   echo "    # Set explicitly:"
   echo "    PasswordAuthentication no"
-  echo "    PermitRootLogin no"
-  echo "3. Restart ssh service:"
-  echo "    sudo launchctl unload /System/Library/LaunchDaemons/ssh.plist"
-  echo "    sudo launchctl load -w /System/Library/LaunchDaemons/ssh.plist"
-  echo "4. Add your public key to the authorized_keys file:"
+  echo "2. Add your public key to the authorized_keys file:"
   echo "    sudo vim ${HOME}/.ssh/authorized_keys"
-  echo "5. Setup moltbot:"
+  echo "3. Setup moltbot:"
   echo "    moltbot onboard --install-daemon"
 }
 
@@ -100,7 +98,6 @@ verify_dependencies
 install_homebrew
 install_mise
 install_dependencies
-setup_pf
 setup_fail2ban
 setup_tailscale
 

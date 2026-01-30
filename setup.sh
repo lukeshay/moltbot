@@ -12,6 +12,17 @@ require_env() {
 
 require_env "TAILSCALE_AUTH_KEY"
 
+brew_path() {
+  if [ -d "/home/linuxbrew/.linuxbrew" ]; then
+    echo "/home/linuxbrew/.linuxbrew"
+  elif [ -d "$HOME/.linuxbrew" ]; then
+    echo "$HOME/.linuxbrew"
+  else
+    echo "Error: Could not find Homebrew installation"
+    exit 1
+  fi
+}
+
 install_dependencies() {
   sudo apt update -y
   sudo apt upgrade -y
@@ -24,15 +35,7 @@ install_dependencies() {
     echo "Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-    # Detect brew installation path
-    if [ -d "/home/linuxbrew/.linuxbrew" ]; then
-      BREW_PATH="/home/linuxbrew/.linuxbrew"
-    elif [ -d "$HOME/.linuxbrew" ]; then
-      BREW_PATH="$HOME/.linuxbrew"
-    else
-      echo "Error: Could not find Homebrew installation"
-      exit 1
-    fi
+    BREW_PATH="$(brew_path)"
 
     echo "eval \"\$($BREW_PATH/bin/brew shellenv)\"" >> ~/.bashrc
     eval "$($BREW_PATH/bin/brew shellenv)"
@@ -54,6 +57,10 @@ setup_mise() {
     echo "Warning: mise.toml not found in current directory"
   fi
 
+  if ! grep -q 'eval "$(mise activate bash)"' ~/.bashrc 2>/dev/null; then
+    echo 'eval "$(mise activate bash)"' >> ~/.bashrc
+  fi
+
   pushd ~
   mise trust
   mise install
@@ -61,7 +68,9 @@ setup_mise() {
 }
 
 setup_tailscale() {
-  sudo tailscale up --auth-key "${TAILSCALE_AUTH_KEY}" --hostname "${TAILSCALE_HOSTNAME:-$(hostname)}"
+  TAILSCALE_HOSTNAME="${TAILSCALE_HOSTNAME:-$(hostname)}"
+
+  sudo tailscale up --auth-key "${TAILSCALE_AUTH_KEY}" --hostname "${TAILSCALE_HOSTNAME}"
 }
 
 setup_ufw() {
@@ -75,6 +84,7 @@ setup_ufw() {
 }
 
 setup_ollama() {
+  brew services start ollama
   ollama pull kimi-k2.5:cloud
 }
 
