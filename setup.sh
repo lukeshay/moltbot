@@ -39,7 +39,12 @@ install_dependencies() {
   fi
 
   brew install mise ollama
-  curl -fsSL https://tailscale.com/install.sh | sh
+
+  if command -v tailscale >/dev/null 2>&1; then
+    echo "Tailscale is already installed, skipping installation."
+  else
+    curl -fsSL https://tailscale.com/install.sh | sh
+  fi
 }
 
 setup_mise() {
